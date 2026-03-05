@@ -1,0 +1,6 @@
+import yfinance as yf
+
+df = yf.download("SPY", period="5d")
+print(df)
+
+
