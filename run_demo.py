@@ -118,6 +118,13 @@ def main():
     plt.tight_layout()
     plt.show()
 
+    # --- Phase 2: Market data infrastructure (optional) ---
+    try:
+        from scripts.phase2_demo import run_phase2_demo
+        run_phase2_demo()
+    except Exception as e:
+        print(f"Phase 2 demo skipped: {e}")
+
 
 if __name__ == "__main__":
     main()

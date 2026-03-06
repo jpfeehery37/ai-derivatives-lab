@@ -1,0 +1,13 @@
+# Phase 2 — Market data infrastructure
+
+This note summarizes the data modules and how they support pricing and research.
+
+**fetcher** (`src/data/fetcher.py`): Fetches options chains and spot prices from yfinance. Raw data is messy (stale quotes, zero volume, crossed markets, missing IVs), so we standardize column names, add computed fields (mid, spread, T, moneyness), and apply optional volume/open-interest filters. `clean_chain` then applies data-quality filters (valid bid/ask, no crossed markets, bounded spread, positive T and strike) so that downstream IV and surface construction use only tradeable quotes. Data cleaning is essential: feeding bad quotes into the IV solver produces garbage surfaces and misleading signals.
+
+**rates** (`src/data/rates.py`): The risk-free rate in Black–Scholes is proxied by US Treasury yields from FRED. We fetch by maturity (1m–10y) and cache per session. `get_rate_for_expiry` picks the nearest maturity to an option’s days-to-expiry so discounting uses the appropriate point on the curve. Using a current rate instead of a fixed 5% improves IV accuracy, especially for short-dated options.
+
+**vol_surface** (`src/data/vol_surface.py`): The volatility surface is IV as a function of strike and expiration. We compute IV per option with `implied_vol_vectorized` (using mid as the market price), add log_moneyness and approximate delta, then drop unreasonable IVs. The surface reveals what a single BS price cannot: the smile (IV varying with strike) and skew (e.g. OTM puts richer than OTM calls for indices). `get_atm_iv` and `get_skew` summarize term structure and skew by expiry; `summarize_surface` bundles ticker, spot, expirations, ATM term structure, skew, and IV min/mean/max for reporting.
+
+**realized_vol** (`src/data/realized_vol.py`): Realized volatility is the annualized standard deviation of log returns over a rolling window (and optionally the Parkinson estimator from high-low range). The volatility cone summarizes the distribution of realized vol across multiple windows and percentiles so we can judge whether current implied vol is cheap or expensive vs history. The variance risk premium (VRP = IV − RV) measures how much the market is paying for volatility relative to recent realized; it connects to strategy (selling vol when VRP is high) and research (Phase 5).
+
+**How Phase 2 connects**: Clean chains and surfaces feed into a strategy library (Phase 3) for trade selection and hedging. Rates and IV surfaces are inputs to consistent pricing and risk. Realized vol and VRP support research (Phase 5) on options richness and variance premia. All modules use pure functions and consistent DataFrame column names so pipelines compose without ad-hoc glue.
