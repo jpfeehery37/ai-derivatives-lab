@@ -89,3 +89,81 @@ def covered_call_payoff(S, K, S0=None):
     pure payoff. Kept for backward compatibility.
     """
     return covered_call_expiration_pnl(S, K, S0)
+
+
+# --- Spreads and combinations (expiration payoff only; _pnl includes premium) ---
+
+
+def bull_call_spread_payoff(S, K1, K2):
+    """
+    Bull call spread at expiration: long call K1, short call K2 (K1 < K2).
+
+    Expiration payoff only. Profits when S rises moderately; caps gain above K2.
+    """
+    S = np.array(S)
+    return call_payoff(S, K1) - call_payoff(S, K2)
+
+
+def bull_call_spread_pnl(S, K1, K2, net_debit):
+    """P&L at expiration: bull call spread payoff minus net debit paid."""
+    return bull_call_spread_payoff(S, K1, K2) - net_debit
+
+
+def bear_put_spread_payoff(S, K1, K2):
+    """
+    Bear put spread at expiration: long put K2, short put K1 (K1 < K2).
+
+    Expiration payoff only. Profits when S falls; loss capped below K1.
+    """
+    S = np.array(S)
+    return put_payoff(S, K2) - put_payoff(S, K1)
+
+
+def bear_put_spread_pnl(S, K1, K2, net_debit):
+    """P&L at expiration: bear put spread payoff minus net debit paid."""
+    return bear_put_spread_payoff(S, K1, K2) - net_debit
+
+
+def butterfly_payoff(S, K1, K2, K3):
+    """
+    Long butterfly at expiration: long 1 call K1, short 2 calls K2, long 1 call K3.
+
+    K1 < K2 < K3 with K2 = (K1 + K3) / 2. Expiration payoff only; profits when S near K2.
+    """
+    S = np.array(S)
+    return call_payoff(S, K1) - 2.0 * call_payoff(S, K2) + call_payoff(S, K3)
+
+
+def butterfly_pnl(S, K1, K2, K3, net_debit):
+    """P&L at expiration: butterfly payoff minus net debit paid."""
+    return butterfly_payoff(S, K1, K2, K3) - net_debit
+
+
+def iron_condor_payoff(S, K1, K2, K3, K4):
+    """
+    Iron condor at expiration: long put K1, short put K2, short call K3, long call K4.
+
+    K1 < K2 < K3 < K4. Expiration payoff only; profits when S stays between K2 and K3.
+    """
+    S = np.array(S)
+    return put_payoff(S, K1) - put_payoff(S, K2) + call_payoff(S, K4) - call_payoff(S, K3)
+
+
+def iron_condor_pnl(S, K1, K2, K3, K4, net_credit):
+    """P&L at expiration: iron condor payoff plus net credit received (premium)."""
+    return iron_condor_payoff(S, K1, K2, K3, K4) + net_credit
+
+
+def strangle_payoff(S, Kp, Kc):
+    """
+    Long strangle at expiration: long put Kp, long call Kc (Kp < Kc).
+
+    Expiration payoff only; profits on large moves in either direction.
+    """
+    S = np.array(S)
+    return put_payoff(S, Kp) + call_payoff(S, Kc)
+
+
+def strangle_pnl(S, Kp, Kc, net_debit):
+    """P&L at expiration: strangle payoff minus net debit paid."""
+    return strangle_payoff(S, Kp, Kc) - net_debit
